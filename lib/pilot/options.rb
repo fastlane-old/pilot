@@ -83,8 +83,8 @@ module Pilot
                                      is_string: true,
                                      optional: true,
                                      verify_block: proc do |value|
-x                                       raise "Please use valid format, ex 1.0(12)" unless (value =~ /.*\(.*\)/)
-                                       end)
+                                       raise "Please use valid format, ex 1.0(12)" unless value =~ /.*\(.*\)/
+                                     end)
       ]
     end
   end

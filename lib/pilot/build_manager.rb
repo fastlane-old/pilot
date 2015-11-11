@@ -27,7 +27,7 @@ module Pilot
         raise "Error uploading ipa file, more information see above".red
       end
     end
-    
+
     def list(options)
       start(options)
       if config[:apple_id].to_s.length == 0 and config[:app_identifier].to_s.length == 0
@@ -104,12 +104,12 @@ module Pilot
 
       if could_determine_uploaded_build?
         # stop if there is not build with valid version in pre-processing builds
-        should_stop = lambda {|builds| builds.select{|build| is_uploaded_build(build)}.count == 0 }
+        should_stop = ->(builds) { builds.count { |build| uploaded_build?(build) } == 0 }
         # store pre-processing build with valid version here
-        obtain_processing_build = lambda {|builds| builds.find{|build| is_uploaded_build(build)} }
+        obtain_processing_build = ->(builds) { builds.find { |build| uploaded_build?(build) } }
       else
-        should_stop = lambda {|builds| builds.count == 0 }
-        obtain_processing_build = lambda {|builds| builds.last } # store the latest pre-processing build here
+        should_stop = ->(builds) { builds.count == 0 }
+        obtain_processing_build = ->(builds) { builds.last } # store the latest pre-processing build here
       end
 
       loop do
@@ -138,7 +138,7 @@ module Pilot
       !config[:build_full_version].nil?
     end
 
-    def is_uploaded_build(build)
+    def uploaded_build?(build)
       build_full_version = "#{build.train_version}(#{build.build_version})"
       config[:build_full_version] == build_full_version
     end
