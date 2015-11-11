@@ -18,7 +18,7 @@ module Pilot
         Helper.log.info "Successfully uploaded the new binary to iTunes Connect"
 
         unless config[:skip_submission]
-          uploaded_build = wait_for_processing_build
+          uploaded_build = obtain_uploaded_build
           distribute_build(uploaded_build, options)
 
           Helper.log.info "Successfully distribute build to beta testers 🚀"
@@ -27,7 +27,7 @@ module Pilot
         raise "Error uploading ipa file, more information see above".red
       end
     end
-
+    
     def list(options)
       start(options)
       if config[:apple_id].to_s.length == 0 and config[:app_identifier].to_s.length == 0
@@ -58,35 +58,15 @@ module Pilot
       return row
     end
 
-    # This method will takes care of checking for the processing builds every few seconds
-    # @return [Build] The build that we just uploaded
-    def wait_for_processing_build
-      # the upload date of the new buid
+    def obtain_uploaded_build
+      # the upload date of the new build
       # we use it to identify the build
+      # or use config[:build_full_version] if provided
 
       start = Time.now
-      wait_processing_interval = config[:wait_processing_interval].to_i
-      latest_build = nil
-      loop do
-        Helper.log.info "Waiting for iTunes Connect to process the new build"
-        sleep wait_processing_interval
-        builds = app.all_processing_builds
-        break if builds.count == 0
-        latest_build = builds.last # store the latest pre-processing build here
-      end
 
-      full_build = nil
-
-      while full_build.nil? || full_build.processing
-        # Now get the full builds with a reference to the application and more
-        # As the processing build from before doesn't have a refernece to the application
-        full_build = app.build_trains[latest_build.train_version].builds.find do |b|
-          b.build_version == latest_build.build_version
-        end
-
-        Helper.log.info "Waiting for iTunes Connect to finish processing the new build (#{full_build.train_version} - #{full_build.build_version})"
-        sleep wait_processing_interval
-      end
+      processing_build = wait_for_processing_build
+      full_build = wait_for_full_build(processing_build)
 
       if full_build
         minutes = ((Time.now - start) / 60).round
@@ -99,6 +79,50 @@ module Pilot
       end
     end
 
+    def wait_for_full_build(processing_build)
+      full_build = nil
+
+      while full_build.nil? || full_build.processing
+        # Now get the full builds with a reference to the application and more
+        # As the processing build from before doesn't have a reference to the application
+
+        full_build = app.build_trains[processing_build.train_version].builds.find do |b|
+          b.build_version == processing_build.build_version
+        end
+
+        Helper.log.info "Waiting for iTunes Connect to finish processing the new build (#{full_build.train_version} - #{full_build.build_version})"
+        sleep wait_processing_interval
+      end
+
+      full_build
+    end
+
+    # This method will takes care of checking for the processing builds every few seconds
+    # @return [Build] The build that we just uploaded
+    def wait_for_processing_build
+      processing_build = nil
+
+      if could_determine_uploaded_build?
+        # stop if there is not build with valid version in pre-processing builds
+        should_stop = lambda {|builds| builds.select{|build| is_uploaded_build(build)}.count == 0 }
+        # store pre-processing build with valid version here
+        obtain_processing_build = lambda {|builds| builds.find{|build| is_uploaded_build(build)} }
+      else
+        should_stop = lambda {|builds| builds.count == 0 }
+        obtain_processing_build = lambda {|builds| builds.last } # store the latest pre-processing build here
+      end
+
+      loop do
+        Helper.log.info "Waiting for iTunes Connect to process the new build"
+        sleep wait_processing_interval
+        builds = app.all_processing_builds
+        break if should_stop.call(builds)
+        processing_build = obtain_processing_build.call(builds)
+      end
+
+      processing_build
+    end
+
     def distribute_build(uploaded_build, options)
       Helper.log.info "Distributing new build to testers"
 
@@ -109,5 +133,19 @@ module Pilot
       uploaded_build.build_train.update_testing_status!(true, 'external')
       return true
     end
+
+    def could_determine_uploaded_build?
+      !config[:build_full_version].nil?
+    end
+
+    def is_uploaded_build(build)
+      build_full_version = "#{build.train_version}(#{build.build_version})"
+      config[:build_full_version] == build_full_version
+    end
+
+    def wait_processing_interval
+      config[:wait_processing_interval].to_i
+    end
+
   end
 end
