@@ -78,8 +78,16 @@ module Pilot
                                      is_string: false,
                                      verify_block: proc do |value|
                                        raise "Please enter a valid positive number of seconds" unless value.to_i > 0
+                                     end),
+        FastlaneCore::ConfigItem.new(key: :build_full_version,
+                                     short_option: "-b",
+                                     env_name: "PILOT_BUILD_FULL_VERSION",
+                                     description: "Build version with format version(build_number), ex 1.0(12)",
+                                     is_string: true,
+                                     optional: true,
+                                     verify_block: proc do |value|
+                                       raise "Please use valid format, ex 1.0(12)" unless value =~ /.*\(.*\)/
                                      end)
-
       ]
     end
   end
