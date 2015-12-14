@@ -17,7 +17,7 @@ module Pilot
       if result
         Helper.log.info "Successfully uploaded the new binary to iTunes Connect"
 
-        unless config[:skip_submission]
+        unless config[:skip_submission] && config[:changelog].nil?
           uploaded_build = wait_for_processing_build
           distribute_build(uploaded_build, options)
 
@@ -106,7 +106,8 @@ module Pilot
       uploaded_build.update_build_information!(whats_new: options[:changelog])
 
       # Submit for internal beta testing
-      uploaded_build.build_train.update_testing_status!(true, 'external')
+      uploaded_build.build_train.update_testing_status!(!options[:skip_submission], 'external')
+
       return true
     end
   end
