@@ -10,7 +10,9 @@
 ------
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/fastlane/fastlane/master/pilot/assets/PilotTextTransparentSmall.png" height="110">
+  <a href="https://github.com/fastlane/fastlane/tree/master/pilot">
+    <img src="https://raw.githubusercontent.com/fastlane/fastlane/master/pilot/assets/PilotTextTransparentSmall.png" height="110">
+  </a>
 </p>
 
 <h3 align="center">💎🚀 <b>pilot</b> has moved to the <b>fastlane</b> <a href='https://github.com/fastlane/fastlane/tree/master/pilot'>main repo</a> 🚀💎</h2>
